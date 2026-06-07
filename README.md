@@ -117,26 +117,164 @@ Not intended as a forgery — a loving, technically accurate homage to the golde
 
 **Language: C — West Coast / K&R Dialect**
 
-Period correct C quirks to preserve:
-- **K&R function declarations** (not ANSI prototypes)
-  ```c
-  /* K&R style — not ANSI */
-  int update_player(x, y, state)
-  int x, y, state;
-  {
-      /* ... */
-  }
-  ```
-- Implicit `int` return types where used in period code
-- `register` keyword used liberally for hints to compiler
-- Minimal or terse comments — West Coast Unix style
-- No function prototypes — declaration order matters
-- `char` used freely as small integer
-- Manual memory layout awareness — knowing exactly where things live
-- Bitwise tricks preferred over multiplication/division
-- Terse variable names (Unix heritage): `p`, `q`, `cnt`, `flg`
-- Occasional hand-coded assembly inserts for critical loops
-- No standard library luxury — roll your own where needed
+---
+
+### West Coast Unix C Style — Background
+
+West Coast C grew from **UC Berkeley's BSD Unix** culture, geographically and culturally close to SRI International in the San Francisco Bay Area. It contrasts with Bell Labs (East Coast/AT&T) C in attitude: terse, clever, slightly cavalier, and deeply Unix-influenced. Code was expected to be read by people who already knew what they were doing. Comments were considered a sign of weakness.
+
+Key influences:
+- **Bill Joy** (vi, csh, BSD) — terse, fast, ship it
+- **Ken Arnold** (curses library) — clean but minimal
+- **Unix philosophy** — do one thing, do it well, use pipes
+- **SRI hacker culture** — adjacent to Stanford, ARPA funded, brilliant and secretive
+
+---
+
+### West Coast C Code Examples
+
+**K&R Function Declarations — not ANSI prototypes:**
+```c
+/* update player position and state -- sn 1982 */
+update_player(x, y, flg)
+int x, y, flg;
+{
+    register int d;
+    d = flg & 0x1 ? -1 : 1;   /* inversion active? */
+    px += d * x;
+    py += d * y;
+}
+```
+
+**Implicit int, terse names, no ceremony:**
+```c
+/* no return type = implicit int, West Coast standard */
+chk_bounds(x, y)
+int x, y;
+{
+    return (x < 0 || x >= XMAX || y < 0 || y >= YMAX);
+}
+```
+
+**Bitwise tricks instead of multiply/divide:**
+```c
+/* multiply by 8 -- never use * on this hardware */
+#define TILE(x)   ((x) << 3)
+
+/* fast modulo power of 2 */
+#define WRAP(x,n) ((x) & ((n)-1))
+
+/* check if level is odd -- controls inversion phase */
+#define ODD(n)    ((n) & 1)
+```
+
+**Register keyword used liberally:**
+```c
+render_tunnel(lvl, frame)
+int lvl, frame;
+{
+    register int i, j, d;
+    register char *p;
+
+    p = vram_base;
+    d = inv_active ? -1 : 1;   /* direction flipped? */
+    for (i = 0; i < ROWS; i++) {
+        for (j = 0; j < COLS; j++) {
+            *p++ = tunnel_lut[lvl][WRAP(i + frame, 16)];
+        }
+    }
+}
+```
+
+**Terse, almost hostile comments:**
+```c
+/* invert ctl -- per spec */
+inv_ctl(flg)
+int flg;
+{
+    ctl_state ^= flg;   /* xor flip bits */
+}
+
+/* dont call this twice -- sn */
+init_hw()
+{
+    *(char *)0xC000 = 0;   /* reset sound latch */
+    *(char *)0xC001 = 0xFF; /* enable all channels */
+}
+```
+
+**Inline assembly for critical loop (6809 example):**
+```c
+/* too slow in C -- asm for scanline fill */
+fill_line(addr, val, cnt)
+char *addr;
+int val, cnt;
+{
+#asm
+    LDX  addr
+    LDA  val
+    LDB  cnt
+LOOP:
+    STA  ,X+
+    DECB
+    BNE  LOOP
+#endasm
+}
+```
+
+**Pointer arithmetic showing off:**
+```c
+/* blast sprite to vram -- no memcpy on this target */
+blt(dst, src, n)
+char *dst, *src;
+int n;
+{
+    while (n--)
+        *dst++ = *src++;
+}
+```
+
+**Global state, minimal structure:**
+```c
+/* globals -- West Coast didn't believe in hiding state */
+int  px, py;        /* player pos */
+int  plives;        /* lives remaining */
+int  lvl;           /* current level */
+int  score;
+int  ctl_state;     /* bitmask: bit0=inv_x, bit1=inv_y */
+int  inv_tmr;       /* inversion countdown */
+char inv_active;    /* nonzero if controls flipped */
+```
+
+**The Polybius inversion logic — West Coast style:**
+```c
+/*
+ * ctl -- read joystick, apply inversion if active
+ * returns dx,dy via pointers -- sn/jb 1982
+ */
+ctl(dx, dy)
+int *dx, *dy;
+{
+    register int raw, d;
+    raw = *(char *)JOY_PORT;
+    d   = inv_active ? -1 : 1;
+    *dx = d * ((raw & JOY_R) ? 1 : (raw & JOY_L) ? -1 : 0);
+    *dy = d * ((raw & JOY_D) ? 1 : (raw & JOY_U) ? -1 : 0);
+}
+```
+
+---
+
+**Additional West Coast style notes:**
+- No function prototypes — declaration order matters, caller beware
+- `char` used freely as small integer to save RAM
+- Manual memory layout — developer knows exactly where every byte lives
+- No standard library — roll your own `strlen`, `memset` etc.
+- Magic numbers preferred over named constants in hot paths
+- Occasional unexplained `/* ?? */` comment left in deliberately
+- One or two intentionally cryptic variable names — authenticity detail
+
+---
 
 **Target size: ~40KB across EPROMs**
 
@@ -223,6 +361,50 @@ Period correct C quirks to preserve:
 - Cabinet can be sourced from a donor 1981-era cabinet and repainted
 - Glass door panel retrofitted to standard cabinet door opening
 - This is a **novelty/showpiece** — not a forgery — enjoy the craft!
+
+---
+
+## The Secret — Hidden Modern Hardware if authentic working hardware is not possible to source
+
+The glass door shows the beautiful period correct PCB to visitors.
+What visitors *don't* see depends entirely on how the PCB is mounted. 
+
+**The Approach:**
+- Period correct green PCB mounted face-forward, fully visible through glass
+- PCB can be **non-functional** — purely decorative display board
+- Behind the PCB, hidden from view, the *actual* game hardware runs
+
+**Hidden Modern Options:**
+
+| Hidden Hardware | Notes |
+|----------------|-------|
+| **Raspberry Pi 4/5** | Runs MAME or custom emulator, HDMI to CRT via converter |
+| **MiSTer FPGA** | Cycle accurate hardware emulation, audiophile quality |
+| **Raspberry Pi Zero 2W** | Tiny, easily hidden behind even a small PCB |
+| **Orange Pi / Odroid** | Alternative SBC options |
+| **Arduino Mega** | If keeping it simple and partially authentic |
+
+**The Sneaky Details:**
+- PCB mounted on standoffs — enough gap behind for a Pi or FPGA board
+- Modern board powered from same supply, wiring hidden behind PCB
+- USB from modern board connects to original-looking joystick/button harness
+- CRT driven via **GBS-8200 or similar** scan converter from HDMI
+- Audio from modern board through period correct amplifier circuit on display PCB
+
+
+
+
+**MiSTer FPGA Note:**
+For the most authentic feel without full deception, MiSTer running a
+6809/Z80 core is genuinely cycle-accurate — the hidden hardware is
+*actually behaving* like 1981 hardware, just on modern silicon.
+
+**Mounting Suggestion:**
+- PCB on 25-30mm standoffs from rear panel
+- Modern board velcro or screwed to rear panel behind PCB
+- Cable management with period-looking braided sleeving on visible runs
+
+
 
 ---
 
