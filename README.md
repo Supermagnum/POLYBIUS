@@ -133,6 +133,8 @@ Key influences:
 
 ### West Coast C Code Examples
 
+K&R function declarations, named after Brian Kernighan and Dennis Ritchie, represent an older style of defining functions in C. This method does not specify parameter types in the function declaration itself, which can lead to potential issues in type checking.
+
 **K&R Function Declarations — not ANSI prototypes:**
 ```c
 /* update player position and state -- sn 1982 */
@@ -276,7 +278,7 @@ int *dx, *dy;
 
 ---
 
-**Target size: ~40KB across EPROMs**
+**Target size: ~40KB across EPROMs ~12,000 lines of C code**
 
 **Single player only**
 
